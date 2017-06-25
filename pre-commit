@@ -1,0 +1,24 @@
+#!/bin/sh -e
+
+##
+# git pre-commit hook:
+#
+# 1. Normalizes the files so they are on one line and have exactly one trailing newline.
+# 2. Validates the key files and errors out if any are invalid.
+# 3. Concatenates the key files into a single file useful for authorized_keys on servers.
+#
+# To enable this hook, put it in .git/hooks and chmod +x it.
+
+for file in *_rsa.pub; do
+    case "$file" in
+        combined_rsa.pub) :;; # Skip
+        *)
+            read -r key < "$file" || true # Don't fail on encountering EOF before newline
+            printf '%s\n' "$key" > "$file"
+            ssh-keygen -lf "$file" >&2 || exit
+            git add "$file"
+            cat "$file";;
+    esac
+done > combined_rsa.pub
+
+git add combined_rsa.pub
